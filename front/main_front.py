@@ -14,13 +14,14 @@ from all_projects.front.diabetes_front import check_diabetes
 from all_projects.front.avocado_front import check_avocado
 from all_projects.front.mushroom_front import check_mushroom
 from all_projects.front.telecom_front import check_telecom
+from all_projects.front.hre_front import check_hre
 
 
 
 with st.sidebar:
     name = st.radio(label='Models: ', options=['Info', 'Student Django', 'Titanic Django', 'House Django', 'Bank Django',
-                                               'Diabetes Django', 'Avocado Django', 'Mushroom, Django', 'Telecom Django',
-                                               'HR Django'])
+                                               'Diabetes Django', 'Avocado Django', 'Mushroom, Django', 'Telecom Django','HRE Django'
+                                               ])
 
 if name == 'Info':
     st.title('Welcome')
@@ -32,6 +33,7 @@ if name == 'Info':
     st.write('Avocado — предсказание цен на авокадо')
     st.write('Mushroom — классификация грибов')
     st.write('Telecom — отток клиентов телекома')
+    st.write('НRЕ- предикт увольнения')
 elif name == 'Student Django':
     check_student()
 elif name == 'Titanic Django':
@@ -48,4 +50,6 @@ elif name == 'Mushroom Django':
     check_mushroom()
 elif name == 'Telecom Django':
     check_telecom()
+elif name == 'HRE Django':
+    check_hre()
 

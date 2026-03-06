@@ -1,19 +1,23 @@
-from django.shortcuts import render
 from rest_framework import views, status
 from rest_framework.response import Response
+from rest_framework.views import APIView
+
+
 from .serializers import (StudentPerformanceSerializers, TitanicSerializers, HouseSerializers,
                           BankSerializers, DiabetesSerializers, AvocadoSerializers,
-                          MushroomSerializers, TelecomSerializers)
+                          MushroomSerializers, TelecomSerializers,HRESerializer)
 import joblib
 import os
 from django.conf import settings
 import numpy as np
 
-student_scaler_path = os.path.join(settings.BASE_DIR, 'models', 'student_scaler.pkl')
-student_scaler = joblib.load(student_scaler_path)
+student_scaler = joblib.load('models/student_scaler.pkl')
+student_model = joblib.load('models/student_model.pkl')
+# student_scaler_path = os.path.join(settings.BASE_DIR, 'models', 'student_scaler.pkl')
+# student_scaler = joblib.load(student_scaler_path)
 
-student_model_path = os.path.join(settings.BASE_DIR, 'models', 'student_model.pkl')
-student_model = joblib.load(student_model_path)
+# student_model_path = os.path.join(settings.BASE_DIR, 'models', 'student_model.pkl')
+# student_model = joblib.load(student_model_path)
 
 titanic_scaler_path = os.path.join(settings.BASE_DIR, 'models', 'scaler_titanic (1).pkl')
 titanic_model_path = os.path.join(settings.BASE_DIR, 'models', 'log_model_titanic (1).pkl')
@@ -56,6 +60,9 @@ telecom_model_path = os.path.join(settings.BASE_DIR, 'models', 'logistic_model.p
 
 telecom_scaler = joblib.load(telecom_scaler_path)
 telecom_model = joblib.load(telecom_model_path)
+
+hre_model = joblib.load('models/hre_model.pkl')
+hre_scaler = joblib.load('models/hre_scaler.pkl')
 
 
 
@@ -108,15 +115,16 @@ StreamingMovies = ['No internet service', 'Yes']
 Contract = ['One year', 'Two year']
 PaperlessBilling = ['Yes']
 PaymentMethod = ['Credit card (automatic)', 'Electronic check', 'Mailed check']
-BusinessTravel = ['Travel_Frequently', 'Travel_Rarely']
+Business = ['Travel_Frequently', 'Travel_Rarely']
 Department = ['Research & Development', 'Sales']
-EducationField = ['Life Sciences', 'Marketing', 'Medical', 'Other', 'Technical Degree']
-Gender = ['Male']
-JobRole = ['Human Resources', 'Laboratory Technician', 'Manager',
+Education = ['Life Sciences', 'Marketing', 'Medical', 'Other', 'Technical Degree']
+Gender_hre = ['Male']
+job = ['Human Resources', 'Laboratory Technician', 'Manager',
            'Manufacturing Director', 'Research Director', 'Research Scientist',
            'Sales Executive', 'Sales Representative']
-MaritalStatus = ['Married', 'Single']
-OverTime = ['Yes']
+Status = ['Married', 'Single']
+Overtime = ['Yes']
+
 
 class StudentPredict(views.APIView):
  def post(self, request):
@@ -409,3 +417,71 @@ class TelecomPredict(views.APIView):
                 telecom_label = 'No'
             return Response({'Churn': telecom_label, 'Probability': round(probability, 2)}, status.HTTP_200_OK)
         return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+
+
+class HREPredict(APIView):
+    def post(self, request):
+        serializer = HRESerializer(data=request.data)
+        if serializer.is_valid():
+            data = serializer.validated_data
+
+            new_business = data.pop('BusinessTravel')
+            business1or_0 = [1 if new_business == i else 0 for i in Business]
+            new_department = data.pop('Department')
+            department1or_0 = [1 if new_department == i else 0 for i in Department]
+            new_education = data.pop('EducationField')
+            education1or_0 = [1 if new_education == i else 0 for i in Education]
+            new_gender = data.pop('Gender')
+            gender1or_0 = [1 if new_gender == i else 0 for i in Gender_hre]
+            new_job = data.pop('JobRole')
+            job1or_0 = [1 if new_job == i else 0 for i in job]
+            new_marital = data.pop('MaritalStatus')
+            marital1or_0 = [1 if new_marital == i else 0 for i in Status]
+            new_over = data.pop('OverTime')
+            over1or_0 = [1 if new_over == i else 0 for i in Overtime]
+            instance = [
+                    data['Age'],
+                    data['DailyRate'],
+                    data['DistanceFromHome'],
+                    data['Education'],
+                    data['EnvironmentSatisfaction'],
+                    data['HourlyRate'],
+                    data['JobInvolvement'],
+                    data['JobLevel'],
+                    data['JobSatisfaction'],
+                    data['MonthlyIncome'],
+                    data['MonthlyRate'],
+                    data['NumCompaniesWorked'],
+                    data['PercentSalaryHike'],
+                    data['PerformanceRating'],
+                    data['RelationshipSatisfaction'],
+                    data['StockOptionLevel'],
+                    data['TotalWorkingYears'],
+                    data['TrainingTimesLastYear'],
+                    data['WorkLifeBalance'],
+                    data['YearsAtCompany'],
+                    data['YearsInCurrentRole'],
+                    data['YearsSinceLastPromotion'],
+                    data['YearsWithCurrManager']
+                ] + business1or_0 + department1or_0 + education1or_0 + gender1or_0 + job1or_0 + marital1or_0 + over1or_0
+            X = np.array(instance).reshape(1, -1)
+            scaled_data = hre_scaler.transform(X)
+            pred = hre_model.predict(scaled_data)[0]
+            proba = hre_model.predict_proba(scaled_data)[0][1]
+            if proba < 0.3:
+                risk_level = 'Низкий'
+                answer = 'Сотрудник останется в компании'
+            elif proba < 0.7:
+                risk_level = 'Средний'
+                answer = 'Сотрудник возможно уйдет'
+            else:
+                risk_level = 'Высокий'
+                answer = 'Сотрудник уйдет'
+            hre_label = 'Yes' if proba > 0.5 else 'No'
+
+            return  Response({'hre_label': hre_label,
+                              'probability': round(float(proba),2),
+                              'risk_level': risk_level,
+                              'message': answer}, status.HTTP_200_OK)
+        return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
+

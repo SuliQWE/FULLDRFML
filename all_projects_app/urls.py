@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import (StudentPredict, TitanicPredict, HousePredict, BankPredict,
-                    DiabetesPredict, AvocadoPredict, MushroomPredict, TelecomPredict)
+                    DiabetesPredict, AvocadoPredict, MushroomPredict, TelecomPredict,HREPredict)
 
 urlpatterns = [
     path('student_predict/', StudentPredict.as_view(), name='student_predict'),
@@ -11,4 +11,5 @@ urlpatterns = [
     path('avocado_predict/', AvocadoPredict.as_view(), name='avocado_predict'),
     path('mushroom_predict/', MushroomPredict.as_view(), name='mushroom_predict'),
     path('telecom_predict/', TelecomPredict.as_view(), name='telecom_predict'),
+    path('hre_predict/', HREPredict.as_view(), name='hre_predict'),
 ]
